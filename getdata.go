@@ -14,7 +14,7 @@ import (
 )
 
 func getContents(url string) (string, error) {
-	timeout := time.Duration(10 * time.Second)
+	timeout := time.Duration(20 * time.Second)
 	httpclient := http.Client{
 		Timeout: timeout,
 	}
@@ -92,11 +92,14 @@ func main() {
 	defer file.Close()
 
 	scanner := bufio.NewScanner(file)
+        var i int =0
 	for scanner.Scan() {
 
 		content, err := getContents(halfUrl+scanner.Text())
 		if err != nil {
-			panic(err)
+			//panic(err)
+			fmt.Println("failed:", scanner.Text())
+                        continue
 		}
 
                 url2 := returnFirstPage(content, re)
@@ -104,14 +107,16 @@ func main() {
 		content, err = getContents(url2)
 
 		if err != nil {
-			panic(err)
+			fmt.Println("failed:", scanner.Text())
+                        continue
                 }
 
             //    fmt.Println(content)
                 orgname := returnOrgName(content, re1)
 
-		fmt.Println(scanner.Text(), orgname)
+		fmt.Println(i, scanner.Text(), orgname)
 		//fmt.Println(len(content))
+                i++
 	}
 
 }
