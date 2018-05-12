@@ -77,10 +77,10 @@ def get_user_info():
     user_query = "JGI account username/email (or 'q' to quit): "
     pw_query = "JGI account password (or 'q' to quit): "
 
-    user = "ail.ubc.ca" # input(user_query)
+    user = "@mail.ubc.ca" # input(user_query)
     if user == "q":
         sys.exit("Exiting now.")
-    pw = "udy1" #input(pw_query)
+    pw = "1" #input(pw_query)
     if pw == "q":
         sys.exit("Exiting now.")
     input_blurb = ("Proceed with USER='{}', PASSWORD='{}' to configure "
@@ -827,24 +827,30 @@ def print_data_list(file_list):
           for subsubtype in  file_list[data_type]['results'][subtype]:
              #print '\t\t', subsubtype
              #print file_list[data_type]['results'][subtype][subsubtype]
-             filename =  file_list[data_type]['results'][subtype][subsubtype]['filename']
-             sizeres = sizere.search(file_list[data_type]['results'][subtype][subsubtype]['size'])
-             if sizeres:
-                   #print '\t', sizeres.group(1), sizeres.group(2)
-                   numeric = int(sizeres.group(1)) 
-
-                   if sizeres.group(2)=='KB':
-                       size = numeric*1024
-                   if sizeres.group(2)=='MB':
-                       size = numeric*1024*1024
-
-                   if sizeres.group(2)=='GB':
-                       size = numeric*1024*1024*1024
-
-                   if sizeres.group(2)=='bytes':
-                       size = numeric
-
-             file_size_list.append((filename, size))
+             try:
+                 filename =  file_list[data_type]['results'][subtype][subsubtype]['filename']
+                 sizestr = file_list[data_type]['results'][subtype][subsubtype]['size']
+    
+                 sizeres = sizere.search(file_list[data_type]['results'][subtype][subsubtype]['size'])
+                 if sizeres:
+                       #print '\t', sizeres.group(1), sizeres.group(2)
+                       numeric = int(sizeres.group(1)) 
+    
+                       if sizeres.group(2)=='KB':
+                           size = numeric*1024
+                       if sizeres.group(2)=='MB':
+                           size = numeric*1024*1024
+    
+                       if sizeres.group(2)=='GB':
+                           size = numeric*1024*1024*1024
+    
+                       if sizeres.group(2)=='bytes':
+                           size = numeric
+    
+                 file_size_list.append((filename, size, sizestr))
+             except:
+                  pass
+                  #print file_list[data_type]['results']
    return file_size_list
 
 
@@ -854,8 +860,8 @@ sorted_list  = sorted(file_size_list,  reverse=True, key = lambda x: x[1])
 
 
 printf( "%s\t%s", args.taxon, args.organism_abbreviation)
-for filename, size  in sorted_list:
-    printf("\t%s (%d)", filename, size)
+for filename, size, sizestr  in sorted_list:
+    printf("\t%s (%s)", filename, sizestr)
 printf("\n")
 
 sys.exit(0)
