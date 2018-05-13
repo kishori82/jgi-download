@@ -1,0 +1,85 @@
+﻿JGI Downloads API
+1) Identify the name of the portal before you can download                                                 
+You can find that using our JGI Portal search on the home page. Use any search terms necessary to find the portal you want, click on the "Download" link in the "Resources" column or the name of the project, then make a note of the short portal name in the URL.
+It is located between the second and third "/" characters in the path after the web host. For example, in the URL https://genome.jgi.doe.gov/portal/Aurpu_var_sub1/... the portal name to use for API download is "Aurpu_var_sub1"                                                 
+
+
+You can also export the full search results into CSV format by clicking "Project Overview Report", then you could iterate over all your projects.The short portal name is identified in "Portal ID" column.        
+        
+2) Log in using the following command. 
+
+
+curl 'https://signon-old.jgi.doe.gov/signon/create' --data-urlencode 'login=USER_NAME' --data-urlencode 'password=USER_PASSWORD' -c cookies > /dev/null                 
+
+
+Replace USER_NAME, USER_PASSWORD with the appropriate values
+
+
+3) Download a list of files available for the portal that you are interested in.                                         
+For example, for PhytozomeV10 the command will look like this:
+curl 'https://genome.jgi.doe.gov/portal/ext-api/downloads/get-directory?organism=PhytozomeV10' -b cookies > files.xml
+                                        
+4) Find the file that you would like to download in the XML document and download it. 
+For example, if you look for "Alyrata_107_v1.0.annotation_info.txt", you will find the following entry in the file:
+
+
+<file label="PhytozomeV10" filename="Alyrata_107_v1.0.annotation_info.txt" size="3 MB" sizeInBytes="3901148" timestamp="Sun Jan 12 17:46:56 PST 2014" url="/portal/ext-api/downloads/get_tape_file?blocking=true&url=/PhytozomeV10/download/_JAMO/53112a9e49607a1be0055980/Alyrata_107_v1.0.annotation_info.txt" project="" library="" md5="b03b5173b0adabe4c0e37f82b4a7a2a1"/>                                                                                  
+The command to download it would look like this:
+
+
+curl 'https://genome.jgi.doe.gov/portal/ext-api/downloads/get_tape_file?blocking=true&url=/PhytozomeV10/download/_JAMO/53112a9e49607a1be0055980/Alyrata_107_v1.0.annotation_info.txt' -b cookies > Alyrata_107_v1.0.annotation_info.txt
+
+
+File and Directory Encoding
+
+
+Because certain characters interfere with scripts and network protocols, starting July 28th 2013 we’ll be automatically translating these characters to safer alternatives. If no filtering is desired, it can be turned off with an added parameter to the get-directory request,
+
+
+filtering=0
+
+
+This API is provided for our more technical users, and as such, it is flexible.  Please let us know if it can be improved and we'll continue to document any improvements on this page.
+
+
+Downloads API XML schema (XSD):
+
+
+<?xml version="1.0"?>
+<xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema">
+        <xs:element name="organismDownloads" type="organismDownloads"/>
+
+
+        <xs:complexType name="organismDownloads">
+                <xs:sequence>
+                        <xs:element name="folder" type="folder" maxOccurs="unbounded"/>
+                </xs:sequence>
+                <xs:attribute name="name" type="xs:string"/>
+        </xs:complexType>
+
+
+        <xs:complexType name="folder">
+                <xs:sequence>
+                        <xs:choice maxOccurs="unbounded">
+                                <xs:element name="folder" type="folder"/>
+                                <xs:element name="file" type="file"/>
+                        </xs:choice>
+                </xs:sequence>
+                <xs:attribute name="name" type="xs:string"/>
+        </xs:complexType>
+
+
+        <xs:complexType name="file">
+                <xs:attribute name="label" type="xs:string" use="required"/>
+                <xs:attribute name="filename" type="xs:string" use="required"/>
+                <xs:attribute name="url" type="xs:string" use="required"/>
+                <xs:attribute name="size" type="xs:string" use="required"/>
+                <xs:attribute name="timestamp" type="xs:string" use="required"/>
+                <xs:attribute name="project" type="xs:string" use="required"/>
+                <xs:attribute name="library" type="xs:string"/>
+                <xs:attribute name="fastq_format" type="xs:string"/>
+                <xs:attribute name="rta_version" type="xs:string"/>
+                <xs:attribute name="score_type" type="xs:string"/>
+                <xs:attribute name="md5" type="xs:string"/>
+        </xs:complexType>
+</xs:schema>

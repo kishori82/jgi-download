@@ -65,23 +65,16 @@ def get_user_info():
     deindent(blurb)
     user_query = "JGI account username/email (or 'q' to quit): "
     pw_query = "JGI account password (or 'q' to quit): "
-    user = input(user_query)
+    user = ""
     if user == "q":
         sys.exit("Exiting now.")
-    pw = input(pw_query)
+    pw = ""
     if pw == "q":
         sys.exit("Exiting now.")
     input_blurb = ("Proceed with USER='{}', PASSWORD='{}' to configure "
                    "script?\n([y]es, [n]o, [r]estart): ".format(user, pw))
     user_info = {"user": user, "password": pw}
-    while True:  # catch invalid responses
-        choice = input(input_blurb)
-        if choice.lower() == "y":
-            return user_info
-        elif choice.lower() == "n":
-            sys.exit("Exiting now.")
-        elif choice.lower() == "r":
-            user_info = get_user_info()
+    return user_info
 
 
 def make_config(config_path, config_info):
@@ -790,35 +783,30 @@ if not any(v["results"] for v in list(file_list.values())):
     cleanExit()
 
 
+print "what do you want to"
 # Ask user which files to download from xml
 url_dict = print_data(file_list, organism)
-user_choice = get_user_choice()
 
 
-urls_to_get = []    
+files = [ "13683.assembled.faa" ,  "13683.assembled.faa.COG" ]
 
-# special case for downloading all available files
-if user_choice == 'a':
-    for k, v in sorted(url_dict.items()):
-        urls_to_get.extend(v.values())
-else:
-    # Retrieve user-selected file urls from dict
-    ids_dict = parse_selection(user_choice)
-    for k, v in sorted(ids_dict.items()):
-        for i in v:
-            urls_to_get.append(url_dict[k][i])
+regs = [ re.compile(x+'$') for x in files ]
 
 
-# Calculate and display total size of selected data
-file_sizes = get_sizes(file_list, sizes_by_url={})
-total_size = sum([file_sizes[url] for url in urls_to_get])
-size_string = byte_convert(total_size)
-print(("Total download size of selected files: {}".format(size_string)))
-download = input("Continue? (y/n): ")
-if download.lower() != "y":
-    cleanExit("ABORTING DOWNLOAD")
+_urls_to_get = {}    
+for k, v in url_dict.iteritems():
+   for f, val in v.iteritems():
+      for reg in regs:
+        if reg.search(val):
+          _urls_to_get[val] = True
 
 
+urls_to_get = _urls_to_get.keys()
+       
+print "urls", urls_to_get
+
+
+print "what do you want to 1"
 # Run curl commands to retrieve selected files
 # Make sure the URL formats conforms to the Genome Portal format
 downloaded_files = []
@@ -826,8 +814,7 @@ for url in urls_to_get:
     url = url_format_checker(url)
     filename = re.search('.+/(.+$)', url).group(1)
     downloaded_files.append(filename)
-    download_command = ("curl http://genome.jgi.doe.gov{} -b cookies "
-                        "-c cookies -L > {}".format(url, filename))
+    download_command = ("curl http://genome.jgi.doe.gov{} -m 60 -b cookies " "-c cookies -L > {}".format(url, filename))
     print("Downloading '{}' using command:\n{}"
           .format(filename, download_command))
     # The next line doesn't appear to be needed to refresh the cookies.
@@ -836,29 +823,5 @@ for url in urls_to_get:
 
 print("Finished downloading all files.")
 
-# Check files for failed downloads (in the form of XML error files
-# masquerading as requested files)
-downloaded_files = hidden_xml_check(downloaded_files)
-
-# Kindly offer to unpack files, if files remain after error check
-if downloaded_files:
-    decompress = input(("Decompress all downloaded files? "
-                        "(y/n/k=decompress and keep original): "))
-    if decompress != "n":
-        if decompress == "k":
-            keep_original = True
-        else:
-            keep_original = False
-        decompress_files(downloaded_files, keep_original)
-        print('Finished decompressing all files.')
-
-# Clean up and exit
-# "cookies" file is always created
-keep_temp = input("Keep temporary files ('{}' and 'cookies')? (y/n): "
-                  .format(xml_index_filename))
-if keep_temp.lower() not in "y, yes":
-    cleanExit()
-else:
-    print("Leaving temporary files intact and exiting.")
 
 sys.exit(0)

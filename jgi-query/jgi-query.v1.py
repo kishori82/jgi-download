@@ -17,6 +17,17 @@ import gzip
 import time
 
 
+def fprintf(file, fmt, *args): 
+    file.write(fmt % args)
+
+
+def printf(fmt, *args): 
+    sys.stdout.write(fmt % args)
+
+
+def eprintf(fmt, *args): 
+    sys.stderr.write(fmt % args)
+
 # FUNCTIONS
 
 def deindent(string):
@@ -65,17 +76,19 @@ def get_user_info():
     deindent(blurb)
     user_query = "JGI account username/email (or 'q' to quit): "
     pw_query = "JGI account password (or 'q' to quit): "
-    user = input(user_query)
+
+    user = "" # input(user_query)
     if user == "q":
         sys.exit("Exiting now.")
-    pw = input(pw_query)
+    pw = "" #input(pw_query)
     if pw == "q":
         sys.exit("Exiting now.")
     input_blurb = ("Proceed with USER='{}', PASSWORD='{}' to configure "
                    "script?\n([y]es, [n]o, [r]estart): ".format(user, pw))
     user_info = {"user": user, "password": pw}
+
     while True:  # catch invalid responses
-        choice = input(input_blurb)
+        choice = "y" #input(input_blurb)
         if choice.lower() == "y":
             return user_info
         elif choice.lower() == "n":
@@ -614,7 +627,9 @@ parser = argparse.ArgumentParser(
                 "curl API. It will return a list of all files available for "
                 "download for a given query organism.",
     formatter_class=argparse.ArgumentDefaultsHelpFormatter)
-parser.add_argument("organism_abbreviation", nargs='?',
+
+
+parser.add_argument("-o", "--organism_abbreviation", nargs='?',
                     help="organism name formatted per JGI's abbreviation. For "
                          "example, 'Nematostella vectensis' is abbreviated by "
                          "JGI as 'Nemve1'. The appropriate abbreviation may be "
@@ -622,6 +637,11 @@ parser.add_argument("organism_abbreviation", nargs='?',
                          "used in the URL of the 'Info' page for that organism "
                          "is the correct abbreviation. The full URL may also "
                          "be used for this argument")
+
+parser.add_argument("-t", "--taxon", nargs='?', help="taxon id")
+
+
+
 parser.add_argument("-x", "--xml", nargs='?', const=1,
                     help="specify a local xml file for the query instead of "
                          "retrieving a new copy from JGI")
@@ -723,9 +743,13 @@ except AttributeError:  # not in address form, assume string is organism name
 org_url = ("http://genome.jgi.doe.gov/ext-api/downloads/get-directory?"
            "organism={}".format(organism))
 
+
+#org_url = ("http://genome.jgi.doe.gov/ext-api/downloads/get-directory?"
+#           "organism={}".format(organism))
+
 # Display sample usage
-print(long_blurb)
-print()  # padding
+#print(long_blurb)
+#print()  # padding
 
 
 # Get xml index of files, using existing local file or curl API
@@ -788,6 +812,61 @@ if not any(v["results"] for v in list(file_list.values())):
            "categories:\n---\n{}\n---"
            .format(organism, "\n".join(DESIRED_CATEGORIES))))
     cleanExit()
+
+
+
+sizere = re.compile(r'(\d+) (MB|GB|bytes)')
+
+def print_data_list(file_list):
+   file_size_list = []
+
+   for data_type in file_list:
+       #print 'dataype', data_type
+       for subtype in  file_list[data_type]['results']:
+          #print '\t', subtype
+          for subsubtype in  file_list[data_type]['results'][subtype]:
+             #print '\t\t', subsubtype
+             #print file_list[data_type]['results'][subtype][subsubtype]
+             try:
+                 filename =  file_list[data_type]['results'][subtype][subsubtype]['filename']
+                 sizestr = file_list[data_type]['results'][subtype][subsubtype]['size']
+    
+                 sizeres = sizere.search(file_list[data_type]['results'][subtype][subsubtype]['size'])
+                 if sizeres:
+                       #print '\t', sizeres.group(1), sizeres.group(2)
+                       numeric = int(sizeres.group(1)) 
+    
+                       if sizeres.group(2)=='KB':
+                           size = numeric*1024
+                       if sizeres.group(2)=='MB':
+                           size = numeric*1024*1024
+    
+                       if sizeres.group(2)=='GB':
+                           size = numeric*1024*1024*1024
+    
+                       if sizeres.group(2)=='bytes':
+                           size = numeric
+    
+                 file_size_list.append((filename, size, sizestr))
+             except:
+                  pass
+                  #print file_list[data_type]['results']
+   return file_size_list
+
+
+file_size_list = print_data_list(file_list)
+
+sorted_list  = sorted(file_size_list,  reverse=True, key = lambda x: x[1])
+
+
+printf( "%s\t%s", args.taxon, args.organism_abbreviation)
+for filename, size, sizestr  in sorted_list:
+    printf("\t%s (%s)", filename, sizestr)
+printf("\n")
+
+sys.exit(0)
+
+
 
 
 # Ask user which files to download from xml
